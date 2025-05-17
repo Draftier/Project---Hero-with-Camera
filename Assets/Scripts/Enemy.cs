@@ -1,3 +1,4 @@
+using System.Collections;
 using TMPro;
 using Unity.VisualScripting;
 using UnityEngine;
@@ -33,6 +34,10 @@ public class Enemy : MonoBehaviour
     public Transform player;
     // Store whether or not the enemy is chasing the player
     private bool chasing = false;
+    public bool isTouchingPlayer = false;
+    public bool isRotating = false;
+    private bool spinningFromHit;
+    public Sprite secondHitSprite;
 
     private void Awake()
     {
@@ -67,39 +72,47 @@ public class Enemy : MonoBehaviour
 
     void Update()
     {
-        if (chasing == true)
+        if (isRotating)
         {
-            EnemyManager.instance.FocusCameraOnChasingEnemy(this);
-            float distance = Vector2.Distance(transform.position, player.position);
-            if (distance <= 40f)
+            return;
+        }
+        if (hitCount < 2)
+        { 
+            if (chasing == true)
             {
-                MoveTowardsPlayer();
+                EnemyManager.instance.FocusCameraOnChasingEnemy(this);
+                float distance = Vector2.Distance(transform.position, player.position);
+                if (distance <= 40f)
+                {
+                    MoveTowardsPlayer();
+                }
+                else
+                {
+                    chasing = false;
+                }
             }
             else
             {
-                chasing = false;
+                EnemyManager.instance.StopCameraFocusIfChaseEnded(this);
+                MoveTowardsWaypoint();
+            }
+            // Set waypoint movement string to be used in UI
+            if (sequential == true)
+            {
+                waypointMode = "Sequential";
+            }
+            else
+            {
+                waypointMode = "Random";
             }
         }
-        else
-        {
-            EnemyManager.instance.StopCameraFocusIfChaseEnded(this);
-            MoveTowardsWaypoint();
-        }
-        // Set waypoint movement string to be used in UI
-        if(sequential == true)
-        {
-            waypointMode = "Sequential";
-        }
-        else
-        {
-            waypointMode = "Random";
-        }
+
     }
 
     // When the enemy collides with the player or a bullet, take damage or destroy the enemy
     private void OnTriggerEnter2D(Collider2D other)
     {
-        if (other.CompareTag("Player"))
+        if (other.CompareTag("Player") && !spinningFromHit && hitCount < 2)
         {
             // Uncomment if want enemy to destroy on player collision
             // health = 0;
@@ -107,25 +120,146 @@ public class Enemy : MonoBehaviour
 
             // If enemy collides with player increment number of enemies and set chase state to true
             Debug.Log("Touched Enemy");
+            isTouchingPlayer = true;
+            StartCoroutine(TouchPlayerRoutine());
+            
             chasing = true;
             TouchedEnemy++;
         }
         else if (other.CompareTag("Bullet"))
         {
-            TakeDamage();
+            Vector2 bulletDirection = other.GetComponent<Rigidbody2D>().linearVelocity;
+            TakeDamage(bulletDirection);
         }
     }
 
+    private void OnTriggerExit2D(Collider2D other)
+    {
+        if (other.CompareTag("Player"))
+        {
+            isTouchingPlayer = false;
+            // If player leaves before 0.5s, start chasing
+            if (!isRotating)
+            {
+                chasing = true;
+                TouchedEnemy++;
+            }
+        }
+    }
+
+    private IEnumerator TouchPlayerRoutine()
+    {
+        float timer = 0f;
+        isRotating = true;
+
+        // Counterclockwise rotation (0.3s)
+        float ccwTime = 0.3f;
+        float elapsed = 0f;
+        while (elapsed < ccwTime)
+        {
+            transform.Rotate(0, 0, 360f * Time.deltaTime); // Counterclockwise
+            elapsed += Time.deltaTime;
+            timer += Time.deltaTime;
+            yield return null;
+        }
+
+        // Clockwise rotation (0.3s)
+        float cwTime = 0.3f;
+        elapsed = 0f;
+        while (elapsed < cwTime)
+        {
+            transform.Rotate(0, 0, -360f * Time.deltaTime); // Clockwise
+            elapsed += Time.deltaTime;
+            timer += Time.deltaTime;
+            yield return null;
+        }
+
+        isRotating = false;
+
+        // If player is still touching after 0.6s, die. Otherwise, chase.
+        if (isTouchingPlayer && timer >= 0.6f)
+        {
+            Destroy(gameObject);
+        }
+        else
+        {
+            chasing = true;
+            TouchedEnemy++;
+        }
+    }
+
+    private IEnumerator SpinFromHit()
+    {
+        spinningFromHit = true;
+        isRotating = true;
+        while (spinningFromHit)
+        {
+            transform.Rotate(0, 0, 360f * Time.deltaTime);
+            yield return null;
+        }
+        isRotating = false;
+    }
+
+    private IEnumerator StopForce(float delay)
+    {
+        Rigidbody2D rb = GetComponent<Rigidbody2D>();
+        float timer = 0f;
+        Vector2 initVelocity = rb.linearVelocity * 2;
+
+        while (timer < delay)
+        {
+            float temp = timer / delay;
+            rb.linearVelocity = Vector2.Lerp(initVelocity, Vector2.zero, temp);
+            timer += Time.deltaTime;
+            yield return null;
+        }
+        rb.linearVelocity = Vector2.zero;
+        rb.angularVelocity = 0f;
+    }
+
+
     // Function to take damage, reduce health, and change alpha color of the sprite
-    public void TakeDamage()
+    public void TakeDamage(Vector2 bulletVel)
     {
         // When the enemy is hit, reduce health by 20% and change alpha color of the sprite
         hitCount++;
         health *= 0.8f;
-        if (hitCount == 4)
+        if (hitCount == 1)
+        {
+            chasing = false;
+            EnemyManager.instance.StopCameraFocusIfChaseEnded(this);
+            if (!spinningFromHit)
+            {
+                StartCoroutine(SpinFromHit());
+            }
+        }
+        else if (hitCount == 2)
+        {
+            Debug.Log("Bullet velocity: " + bulletVel);
+            spinningFromHit = false;
+            // StopCoroutine(SpinFromHit());
+
+            spriteRenderer.sprite = secondHitSprite;
+            Rigidbody2D rb = GetComponent<Rigidbody2D>();
+            rb.AddForce(bulletVel.normalized * 20f, ForceMode2D.Impulse);
+            isRotating = true;
+
+            StartCoroutine(StopForce(0.8f));
+        }
+
+        // Uncomment for older hitcount system
+        // if (hitCount == 4)
+        // {
+        //     Destroy(gameObject);
+        // }
+
+        // New hitcount system
+        if (hitCount == 3)
         {
             Destroy(gameObject);
         }
+
+
         // Change the alpha color of the sprite to indicate damage reduce alpha by 20% or 80% of previous alpha
         spriteColor.a *= 0.8f;
         spriteRenderer.color = spriteColor;

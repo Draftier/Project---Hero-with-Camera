@@ -53,6 +53,9 @@ public class PlayerMovement : MonoBehaviour
             GameObject projectile = Instantiate(projectilePrefab, transform.position, transform.rotation);
             Physics2D.IgnoreCollision(projectile.GetComponent<Collider2D>(), GetComponent<Collider2D>());
 
+            Rigidbody2D rb = projectile.GetComponent<Rigidbody2D>();
+            rb.linearVelocity = transform.up * projectileSpeed;
+
             // Set cooldown bar to full instantly when projectile is fired
             charge = 1f;
             leftBar.fillAmount = charge;

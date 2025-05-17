@@ -34,9 +34,13 @@ public class Enemy : MonoBehaviour
     public Transform player;
     // Store whether or not the enemy is chasing the player
     private bool chasing = false;
+    // Store whether or not enemy is touching player
     public bool isTouchingPlayer = false;
+    // Store whether or not enemy is rotating due to touching player
     public bool isRotating = false;
+    // Store whether or not enemy is rotating due to being hit twice
     private bool spinningFromHit;
+    // Store the sprite to be used upon being hit twice from projectiles
     public Sprite secondHitSprite;
 
     private void Awake()
@@ -72,16 +76,21 @@ public class Enemy : MonoBehaviour
 
     void Update()
     {
+        // If currently rotating (from second hit) then do not move
         if (isRotating)
         {
             return;
         }
+        // If number of projectiles hit is less than 2
         if (hitCount < 2)
-        { 
+        {
+            // Check if enemy is chasing player
             if (chasing == true)
             {
+                // If enemy is chasing player, set camera to focus on enemy
                 EnemyManager.instance.FocusCameraOnChasingEnemy(this);
                 float distance = Vector2.Distance(transform.position, player.position);
+                // If distance between enemy and player is less than 40 units, move towards player
                 if (distance <= 40f)
                 {
                     MoveTowardsPlayer();
@@ -93,6 +102,7 @@ public class Enemy : MonoBehaviour
             }
             else
             {
+                // If enemy is not chasing player, set camera to stop focusing on enemy
                 EnemyManager.instance.StopCameraFocusIfChaseEnded(this);
                 MoveTowardsWaypoint();
             }
@@ -128,17 +138,21 @@ public class Enemy : MonoBehaviour
         }
         else if (other.CompareTag("Bullet"))
         {
+            // Store linear velocity of bullet to use to push enemy back
+            // If enemy is hit a second time
             Vector2 bulletDirection = other.GetComponent<Rigidbody2D>().linearVelocity;
             TakeDamage(bulletDirection);
         }
     }
 
+    // When enemy leaves the player set isTouchingPlayer to false
+    // If player leaves and enemy not dead or rotating, then 
+    // Start chasing the player
     private void OnTriggerExit2D(Collider2D other)
     {
         if (other.CompareTag("Player"))
         {
             isTouchingPlayer = false;
-            // If player leaves before 0.5s, start chasing
             if (!isRotating)
             {
                 chasing = true;
@@ -147,33 +161,35 @@ public class Enemy : MonoBehaviour
         }
     }
 
+    // Coroutine used to rotate the enemy when touching the player
     private IEnumerator TouchPlayerRoutine()
     {
         float timer = 0f;
         isRotating = true;
 
-        // Counterclockwise rotation (0.3s)
+        // First do counterclockwise rotation (0.3s)
         float ccwTime = 0.3f;
         float elapsed = 0f;
         while (elapsed < ccwTime)
         {
-            transform.Rotate(0, 0, 360f * Time.deltaTime); // Counterclockwise
+            transform.Rotate(0, 0, 360f * Time.deltaTime);
             elapsed += Time.deltaTime;
             timer += Time.deltaTime;
             yield return null;
         }
 
-        // Clockwise rotation (0.3s)
+        // Then do clockwise rotation (0.3s)
         float cwTime = 0.3f;
         elapsed = 0f;
         while (elapsed < cwTime)
         {
-            transform.Rotate(0, 0, -360f * Time.deltaTime); // Clockwise
+            transform.Rotate(0, 0, -360f * Time.deltaTime);
             elapsed += Time.deltaTime;
             timer += Time.deltaTime;
             yield return null;
         }
 
+        // After 0.6s, stop rotating
         isRotating = false;
 
         // If player is still touching after 0.6s, die. Otherwise, chase.
@@ -188,24 +204,32 @@ public class Enemy : MonoBehaviour
         }
     }
 
+    // Coroutine used to spin the enemy when hit by a bullet
+    // Enemy should spin forever until it is hit again or destroyed
     private IEnumerator SpinFromHit()
     {
+        // Set spin variables to true
         spinningFromHit = true;
         isRotating = true;
+        // Rotate the enemy while it is spinning
         while (spinningFromHit)
         {
             transform.Rotate(0, 0, 360f * Time.deltaTime);
             yield return null;
         }
+        // After the enemy is hit again, stop spinning
         isRotating = false;
     }
 
+    // Coroutine used to stop the enemy from moving after second hit
     private IEnumerator StopForce(float delay)
     {
+        // Get the rigidbody of the enemy and set the initial velocity
         Rigidbody2D rb = GetComponent<Rigidbody2D>();
         float timer = 0f;
-        Vector2 initVelocity = rb.linearVelocity * 2;
+        Vector2 initVelocity = rb.linearVelocity * 2; // Const 2 to push enemy farther
 
+        // Gradually reduce the velocity of the enemy to zero over the given delay
         while (timer < delay)
         {
             float temp = timer / delay;
@@ -213,6 +237,7 @@ public class Enemy : MonoBehaviour
             timer += Time.deltaTime;
             yield return null;
         }
+        // After the delay, set the velocity to zero and stop the enemy from moving
         rb.linearVelocity = Vector2.zero;
         rb.angularVelocity = 0f;
     }
@@ -224,6 +249,7 @@ public class Enemy : MonoBehaviour
         // When the enemy is hit, reduce health by 20% and change alpha color of the sprite
         hitCount++;
         health *= 0.8f;
+        // If hitcount is 1 start spinning from hit
         if (hitCount == 1)
         {
             chasing = false;
@@ -233,11 +259,11 @@ public class Enemy : MonoBehaviour
                 StartCoroutine(SpinFromHit());
             }
         }
+        // If hitcount is 2, stop spinning change sprite and add force to the enemy
         else if (hitCount == 2)
         {
             Debug.Log("Bullet velocity: " + bulletVel);
             spinningFromHit = false;
-            // StopCoroutine(SpinFromHit());
 
             spriteRenderer.sprite = secondHitSprite;
             Rigidbody2D rb = GetComponent<Rigidbody2D>();
@@ -253,7 +279,7 @@ public class Enemy : MonoBehaviour
         //     Destroy(gameObject);
         // }
 
-        // New hitcount system
+        // New hitcount system on third hit kill enemy
         if (hitCount == 3)
         {
             Destroy(gameObject);
@@ -264,20 +290,26 @@ public class Enemy : MonoBehaviour
         spriteColor.a *= 0.8f;
         spriteRenderer.color = spriteColor;
     }
+    // Function to move the enemy towards the player for chase
     private void MoveTowardsPlayer()
     {
+        // Get position of player and direction to player
         Vector2 targetPosition = player.position;
         Vector2 direction = (targetPosition - (Vector2)transform.position);
 
+        // Normalize the direction vector
         float angle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg - 90f;
         Quaternion targetRotation = Quaternion.Euler(0, 0, angle);
 
+        // Rotate towards the target rotation
         float rotationSpeed = 120f;
         transform.rotation = Quaternion.RotateTowards(transform.rotation, targetRotation, rotationSpeed * Time.deltaTime);
 
+        // Move towards the target position based upon the speed and direction
         float speed = 30f;
         transform.position += transform.up * speed * Time.deltaTime;
     }
+    // Function to move the enemy towards the waypoint
     private void MoveTowardsWaypoint()
     {
         // Get the current waypoint position from the WayPointManager   

@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using TMPro;
 using UnityEngine;
 using UnityEngine.PlayerLoop;
 using UnityEngine.Rendering;
@@ -21,12 +22,17 @@ public class WayPointManager : MonoBehaviour
     private bool isHidden = false;
     // Store waypoint visibility as a string
     public static string waypointVisibility = "visible";
+    // Store the CameraManger to be used for focusing on waypoints
     public CameraManager cameraManager;
+    // Store focus coroutine to be used for focusing on waypoints
     private Coroutine focusCoroutine;
+    // Store whether or not waypoint is being focused on in text
+    public TextMeshProUGUI waypointText;
 
+    // Called before start function
     private void Awake()
     {
-        // When instantiated set spawn bounds
+        // When instantiated set spawn bounds of waypoints
         screenBounds = Camera.main.ScreenToWorldPoint(new Vector3(Screen.width, Screen.height, Camera.main.transform.position.z));
     }
     // Method used to generate spawn position for waypoint based on previous position
@@ -111,20 +117,27 @@ public class WayPointManager : MonoBehaviour
         focusCoroutine = StartCoroutine(FocusRoutine(staticPosition, time));
     }
 
-    private IEnumerator FocusRoutine(Vector3 focusPosition, float time )
+    // Coroutine used to focus on a waypoint for a given amount of time
+    private IEnumerator FocusRoutine(Vector3 focusPosition, float time)
     {
+        // If camera manager not null then focus on waypoint
+        // And set waypoint cam text to active
         if (cameraManager != null)
         {
+            waypointText.text = "WayPoint Cam: Active";
             cameraManager.FocusOnStaticPosition(focusPosition);
         }
-        
 
+        // Wait for the given amount of time
         yield return new WaitForSeconds(time);
 
+        // If camera manager not null then set waypoint cam text to inactive
+        // And disable monitoring
         if (cameraManager != null)
         {
+            waypointText.text = "WayPoint Cam: Shut Off";
             cameraManager.DisableMonitoring();
         }
-        
+
     }
 }

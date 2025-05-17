@@ -28,6 +28,7 @@ public class PlayerMovement : MonoBehaviour
     // Store the image for the left cooldown bar and right cooldown bar
     public Image leftBar;
     public Image rightBar;
+    // Store the camera manager to be used for focusing on the player
     public CameraManager cameraManager;
 
 
@@ -53,6 +54,7 @@ public class PlayerMovement : MonoBehaviour
             GameObject projectile = Instantiate(projectilePrefab, transform.position, transform.rotation);
             Physics2D.IgnoreCollision(projectile.GetComponent<Collider2D>(), GetComponent<Collider2D>());
 
+            // Set the projectile's velocity to be in the direction the player is facing
             Rigidbody2D rb = projectile.GetComponent<Rigidbody2D>();
             rb.linearVelocity = transform.up * projectileSpeed;
 
@@ -73,6 +75,7 @@ public class PlayerMovement : MonoBehaviour
         leftBar.fillAmount = 0;
         rightBar.fillAmount = 0;
 
+        // Set the camera to follow the player
         Vector3 forward = transform.up;
         transform.Translate(forward * speed * Time.deltaTime, Space.World);
         cameraManager.GetComponent<Camera>().enabled = true;

@@ -18,7 +18,7 @@ public class WayPoint : MonoBehaviour
     public float Health = 100.0f;
     // Store the priority of the waypoint (set in editor for if I utilize prefab and manually want to set priority)
     public int priority;
-
+    // Store whether or not the waypoint is shaking
     private bool shaking = false;
 
     void Awake()
@@ -46,17 +46,23 @@ public class WayPoint : MonoBehaviour
         hitCount++;
         if (hitCount == 1)
         {
+            // Set the camera to focus on the waypoint for 1 second
             wayPointManager.FocusOnWaypointForTime(gameObject, 1.0f);
+            // Shake the waypoint for 1 second with a magnitude of 1
             ShakeWaypoint(1, 1);
         }
         else if (hitCount == 2)
         {
+            // Set the camera to focus on the waypoint for 2 seconds
             wayPointManager.FocusOnWaypointForTime(gameObject, 2.0f);
+            // Shake the waypoint for 2 seconds with a magnitude of 4
             ShakeWaypoint(2, 4);
         }
         else if (hitCount == 3)
         {
+            // Set the camera to focus on the waypoint for 3 seconds
             wayPointManager.FocusOnWaypointForTime(gameObject, 3.0f);
+            // Shake the waypoint for 3 seconds with a magnitude of 9
             ShakeWaypoint(3, 9);
         }
         else if (hitCount == 4)
@@ -72,39 +78,53 @@ public class WayPoint : MonoBehaviour
         spriteRenderer.color = spriteColor;
     }
 
+    // Method used to shake the waypoint
     private void ShakeWaypoint(float duration, float magnitude)
     {
-        if(shaking == false)
+        // If the waypoint is not shaking, start shaking it
+        if (shaking == false)
         {
+            // Start shaking the waypoint for the given duration and magnitude
             StartCoroutine(ShakeNow(duration, magnitude));
+            // Set the shaking flag to true
             shaking = true;
         }
-        else if(shaking == true)
+        else if (shaking == true)
         {
+            // If the waypoint is already shaking, stop the current shake coroutine and start a new one
             StopCoroutine(ShakeNow(duration, magnitude));
             StartCoroutine(ShakeNow(duration, magnitude));
         }
+        // Set the shaking flag to false
         shaking = false;
     }
 
+    // Coroutine used to shake the waypoint
     private IEnumerator ShakeNow(float duration, float magnitude)
     {
+        // Store the original position of the waypoint
         Vector3 originalPos = transform.position;
 
+        // Store the elapsed time
         float elapsed = 0.0f;
 
-        while(elapsed < duration)
+        // While the elapsed time is less than the duration
+        while (elapsed < duration)
         {
+            // Generate a random x and y position within the given magnitude
             float x = Random.Range(-1f, 1f) * magnitude;
             float y = Random.Range(-1f, 1f) * magnitude;
 
+            // Set the position of the waypoint to the original position plus the random x and y positions
             transform.position = new Vector3(x + originalPos.x, y + originalPos.y, originalPos.z);
 
+            // Increment the elapsed time by the time since the last frame
             elapsed += Time.deltaTime;
-            
+
+            // Wait for the next frame
             yield return null;
         }
-
+        // After the duration is over, set the position of the waypoint back to the original position
         transform.position = originalPos;
     }
 }

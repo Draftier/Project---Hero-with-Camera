@@ -29,6 +29,10 @@ public class Enemy : MonoBehaviour
     public static bool sequential = true;
     // Store the current waypoint mode as a string
     public static string waypointMode = "Sequential";
+    // Store the player object to be used for chases
+    public Transform player;
+    // Store whether or not the enemy is chasing the player
+    private bool chasing = false;
 
     private void Awake()
     {
@@ -53,12 +57,34 @@ public class Enemy : MonoBehaviour
 
         // Set first waypoint to a random waypoint that plane visits initially sequentially
         currentWaypoint = Random.Range(0, wayPointManager.waypoints.Length);
+
+        player = GameObject.FindGameObjectWithTag("Player").transform;
+        if (player != null)
+        {
+            player = player.transform;
+        }
     }
 
     void Update()
     {
-        // Call to move towards the current waypoint
-        MoveTowardsWaypoint();
+        if (chasing == true)
+        {
+            EnemyManager.instance.FocusCameraOnChasingEnemy(this);
+            float distance = Vector2.Distance(transform.position, player.position);
+            if (distance <= 40f)
+            {
+                MoveTowardsPlayer();
+            }
+            else
+            {
+                chasing = false;
+            }
+        }
+        else
+        {
+            EnemyManager.instance.StopCameraFocusIfChaseEnded(this);
+            MoveTowardsWaypoint();
+        }
         // Set waypoint movement string to be used in UI
         if(sequential == true)
         {
@@ -75,8 +101,13 @@ public class Enemy : MonoBehaviour
     {
         if (other.CompareTag("Player"))
         {
-            health = 0;
-            Destroy(gameObject);
+            // Uncomment if want enemy to destroy on player collision
+            // health = 0;
+            // Destroy(gameObject);
+
+            // If enemy collides with player increment number of enemies and set chase state to true
+            Debug.Log("Touched Enemy");
+            chasing = true;
             TouchedEnemy++;
         }
         else if (other.CompareTag("Bullet"))
@@ -99,6 +130,20 @@ public class Enemy : MonoBehaviour
         spriteColor.a *= 0.8f;
         spriteRenderer.color = spriteColor;
     }
+    private void MoveTowardsPlayer()
+    {
+        Vector2 targetPosition = player.position;
+        Vector2 direction = (targetPosition - (Vector2)transform.position);
+
+        float angle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg - 90f;
+        Quaternion targetRotation = Quaternion.Euler(0, 0, angle);
+
+        float rotationSpeed = 120f;
+        transform.rotation = Quaternion.RotateTowards(transform.rotation, targetRotation, rotationSpeed * Time.deltaTime);
+
+        float speed = 30f;
+        transform.position += transform.up * speed * Time.deltaTime;
+    }
     private void MoveTowardsWaypoint()
     {
         // Get the current waypoint position from the WayPointManager   
@@ -108,15 +153,15 @@ public class Enemy : MonoBehaviour
         Vector2 direction = (targetPosition - (Vector2)transform.position).normalized;
 
         // Calculate the angle to rotate towards
-        float angle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg - 90f; 
+        float angle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg - 90f;
         Quaternion targetRotation = Quaternion.Euler(0, 0, angle);
 
         // Rotate towards the target rotation
-        float rotationSpeed = 120f; 
+        float rotationSpeed = 120f;
         transform.rotation = Quaternion.RotateTowards(transform.rotation, targetRotation, rotationSpeed * Time.deltaTime);
 
         // Move towards the target position
-        float speed = 30f; 
+        float speed = 30f;
         transform.position += transform.up * speed * Time.deltaTime;
 
         // If enemy is within 30 units move to next waypoint
@@ -135,7 +180,7 @@ public class Enemy : MonoBehaviour
             {
                 // Randomly move to a different waypoint
                 int genIndex = Random.Range(0, wayPointManager.waypoints.Length);
-                
+
                 // While loop to ensure that the enemy does not return to the same waypoint
                 while (genIndex == currentWaypoint)
                 {

@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -13,13 +14,15 @@ public class WayPointManager : MonoBehaviour
     public float spawnRangeX;
     public float spawnRangeY;
     // Store the screen bounds to be used for respawning waypoints
-    private Vector3 screenBounds; 
+    private Vector3 screenBounds;
     // Store the waypoints to be used for respawning
     public GameObject[] waypoints;
     // Store whether or not waypoints are hidden
     private bool isHidden = false;
     // Store waypoint visibility as a string
     public static string waypointVisibility = "visible";
+    public CameraManager cameraManager;
+    private Coroutine focusCoroutine;
 
     private void Awake()
     {
@@ -30,8 +33,8 @@ public class WayPointManager : MonoBehaviour
     private Vector2 GenerateSpawnPosition(Vector2 previousPosition)
     {
         // Generate random spawn position within the screen bounds and within the spawn range (+-15 for x and y in editor)
-        float spawnX = Random.Range(previousPosition.x-spawnRangeX, previousPosition.x + spawnRangeX);
-        float spawnY = Random.Range(previousPosition.y-spawnRangeY, previousPosition.y +spawnRangeY);
+        float spawnX = Random.Range(previousPosition.x - spawnRangeX, previousPosition.x + spawnRangeX);
+        float spawnY = Random.Range(previousPosition.y - spawnRangeY, previousPosition.y + spawnRangeY);
 
         // Clamp the spawn position to be within the screen bounds
         spawnX = Mathf.Clamp(spawnX, -screenBounds.x, screenBounds.x);
@@ -56,7 +59,7 @@ public class WayPointManager : MonoBehaviour
         .ToList();
 
         // If current waypoint index is less than the number of active waypoints, return the position of the current waypoint
-        if(currentWaypointIndex < activeWaypoints.Count)
+        if (currentWaypointIndex < activeWaypoints.Count)
         {
             return activeWaypoints[currentWaypointIndex].transform.position;
         }
@@ -71,7 +74,7 @@ public class WayPointManager : MonoBehaviour
     public void HideWayPoints()
     {
         isHidden = !isHidden;
-        if(isHidden == true)
+        if (isHidden == true)
         {
             // Hides all waypoints by setting them to inactive
             waypointVisibility = "hidden";
@@ -79,11 +82,11 @@ public class WayPointManager : MonoBehaviour
             {
                 if (waypoint != null)
                 {
-                waypoint.SetActive(false);
+                    waypoint.SetActive(false);
                 }
             }
         }
-        else if(isHidden == false)
+        else if (isHidden == false)
         {
             // Reveals all waypoints by setting them to active
             waypointVisibility = "visible";
@@ -94,6 +97,34 @@ public class WayPointManager : MonoBehaviour
                     waypoint.SetActive(true);
                 }
             }
-        }   
+        }
+    }
+    
+    // Call this method when a waypoint is hit
+    public void FocusOnWaypointForTime(GameObject waypoint, float time)
+    {
+        if (focusCoroutine != null)
+        {
+            StopCoroutine(focusCoroutine);
+        }
+        Vector3 staticPosition = waypoint.transform.position;
+        focusCoroutine = StartCoroutine(FocusRoutine(staticPosition, time));
+    }
+
+    private IEnumerator FocusRoutine(Vector3 focusPosition, float time )
+    {
+        if (cameraManager != null)
+        {
+            cameraManager.FocusOnStaticPosition(focusPosition);
+        }
+        
+
+        yield return new WaitForSeconds(time);
+
+        if (cameraManager != null)
+        {
+            cameraManager.DisableMonitoring();
+        }
+        
     }
 }

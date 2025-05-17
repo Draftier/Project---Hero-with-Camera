@@ -28,6 +28,8 @@ public class PlayerMovement : MonoBehaviour
     // Store the image for the left cooldown bar and right cooldown bar
     public Image leftBar;
     public Image rightBar;
+    public CameraManager cameraManager;
+
 
     // Store the current charge of the cooldown bar
     float charge = 0f;
@@ -64,12 +66,14 @@ public class PlayerMovement : MonoBehaviour
     void Start()
     {
         // Initialize bar fill, starting speed, and movement type
-        mouseDrive = true; 
+        mouseDrive = true;
         leftBar.fillAmount = 0;
         rightBar.fillAmount = 0;
 
         Vector3 forward = transform.up;
         transform.Translate(forward * speed * Time.deltaTime, Space.World);
+        cameraManager.GetComponent<Camera>().enabled = true;
+        cameraManager.FocusOnObject(gameObject);
     }
 
     void Update()

@@ -44,19 +44,22 @@ public class WayPoint : MonoBehaviour
         // When taking damage increment hit count, and set spritecolor to 80% of original alpha
         // And 75% of health before hit. If hitcount is 4 then reset hitcount, "spawn" a new waypoint, and reset health
         hitCount++;
-        if(hitCount == 1)
+        if (hitCount == 1)
         {
+            wayPointManager.FocusOnWaypointForTime(gameObject, 1.0f);
             ShakeWaypoint(1, 1);
         }
-        else if(hitCount == 2)
+        else if (hitCount == 2)
         {
+            wayPointManager.FocusOnWaypointForTime(gameObject, 2.0f);
             ShakeWaypoint(2, 4);
         }
-        else if(hitCount == 3)
+        else if (hitCount == 3)
         {
-            ShakeWaypoint(3,9);
+            wayPointManager.FocusOnWaypointForTime(gameObject, 3.0f);
+            ShakeWaypoint(3, 9);
         }
-        else if(hitCount == 4)
+        else if (hitCount == 4)
         {
             // Doesn't actually destroy waypoint but sets it to new position
             wayPointManager.SpawnWayPoint(gameObject, gameObject.transform.position);

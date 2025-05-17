@@ -103,9 +103,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   health: 100
   spriteRenderer: {fileID: 6863789338391457521}
-  PlaneManager: {fileID: 5080612253306165513, guid: 53423992744b98c46840a3b8c7fe1f44, type: 3}
   spriteColor: {r: 0, g: 0, b: 0, a: 0}
-  player: {fileID: 2973135833911931077, guid: 27513ee4a82fba24db4ccc66cd923c26, type: 3}
+  wayPointManager: {fileID: 0}
+  player: {fileID: 5459455753829085916, guid: 27513ee4a82fba24db4ccc66cd923c26, type: 3}
 --- !u!61 &4683630382943645644
 BoxCollider2D:
   m_ObjectHideFlags: 0

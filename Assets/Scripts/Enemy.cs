@@ -133,7 +133,7 @@ public class Enemy : MonoBehaviour
             isTouchingPlayer = true;
             StartCoroutine(TouchPlayerRoutine());
             
-            chasing = true;
+            // chasing = true;
             TouchedEnemy++;
         }
         else if (other.CompareTag("Bullet"))
@@ -190,7 +190,11 @@ public class Enemy : MonoBehaviour
         }
 
         // After 0.6s, stop rotating
-        isRotating = false;
+        if (!spinningFromHit)
+        { 
+            isRotating = false;
+        }
+        
 
         // If player is still touching after 0.6s, die. Otherwise, chase.
         if (isTouchingPlayer && timer >= 0.6f)
@@ -211,6 +215,12 @@ public class Enemy : MonoBehaviour
         // Set spin variables to true
         spinningFromHit = true;
         isRotating = true;
+
+        // Freeze movement of enemy
+        Rigidbody2D rb = GetComponent<Rigidbody2D>();
+        rb.linearVelocity = Vector2.zero;
+        rb.angularVelocity = 0f;
+        
         // Rotate the enemy while it is spinning
         while (spinningFromHit)
         {
@@ -246,14 +256,16 @@ public class Enemy : MonoBehaviour
     // Function to take damage, reduce health, and change alpha color of the sprite
     public void TakeDamage(Vector2 bulletVel)
     {
+        // If enemy is hit set chasing to false and stop camera focus
+        chasing = false;
+        EnemyManager.instance.StopCameraFocusIfChaseEnded(this);
+        isRotating = true;
         // When the enemy is hit, reduce health by 20% and change alpha color of the sprite
         hitCount++;
         health *= 0.8f;
         // If hitcount is 1 start spinning from hit
         if (hitCount == 1)
         {
-            chasing = false;
-            EnemyManager.instance.StopCameraFocusIfChaseEnded(this);
             if (!spinningFromHit)
             {
                 StartCoroutine(SpinFromHit());
